@@ -1,0 +1,123 @@
+#!/bin/sh
+
+************Jenkins Setup script****************
+yum install java-1.8.0-openjdk.x86_64
+java -version
+ 
+wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo
+rpm –import http://pkg.jenkins-ci.org/redhat-stable/jenkins-ci.org.key
+yum install jenkins
+service jenkins start
+chkconfig jenkins on
+alternatives --install /usr/bin/jar jar /opt/jdk1.8.0_161/bin/jar 2
+alternatives --install /usr/bin/javac javac /opt/jdk1.8.0_161/bin/javac 2
+alternatives --set jar /opt/jdk1.8.0_161/bin/jar
+alternatives --set javac /opt/jdk1.8.0_161/bin/javac
+************Jenkins Setup script****************
+
+->Create this script on /home/ec2-user and execute it, this will install aws code deploy agent. This will help in doing deployment to any number of instances in 1 go.
+************************code-deploy-agent.sh******************
+#!/bin/sh
+yum update
+yum install -y ruby
+cd /home/ec2-user
+aws s3 cp s3://aws-codedeploy-us-west-1/latest/install .
+chmod +x ./install
+./install auto
+service codedeploy-agent status
+*******************************end  code-deploy-agent.sh********
+
+-->Add GITHub plugin, aws code deploy plugin and configure the details.
+GitHub configure
+https://github.com/praveensinghpokharia/node-js-sample/node-js-sample.git/   --same way clone the repo which was ask during assessment and add it under your guthub,
+here replace with my repo.
+
+git clone that repo and add code under your repo.
+
+***********steps login into putty ********
+yum install git
+cd /home/ec2-user
+git clone git@github.com:heroku/node-js-sample.git
+vi appspec.yml
+
+***************************appspec.yml***************
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /home/ec2-user/test
+
+permissions:
+   - object: /home/ec2-user/test
+     pattern: "**"
+     mode: 777
+     type:
+       - file
+
+hooks:
+  ApplicationInstall:
+     - location: home/ec2-user/aa.sh
+       runas: root
+	   
+***************************************
+
+create below file
+*****************/home/ec2-user/aa.sh ***********
+#!/bin/sh
+sudo touch /home/ec2-user/temp.txt
+chmod 777 /home/ec2-user/temp.txt
+install_count=$( yum install -y gcc-c++ make  nodejs | wc -l)
+if [ $install_count -gt 0 ]
+then
+  echo " package  already exists! no need to install again"
+  else
+sudo yum install -y gcc-c++ make  nodejs
+fi
+sudo curl -sL https://rpm.nodesource.com/setup_6.x | sudo -E bash -
+sudo npm install -y
+
+output=`ps -eo pid,command | grep "index.js" | grep -v grep | awk '{print $1}'|wc -l`
+kill_process=`ps -eo pid,command | grep "index.js" | grep -v grep | awk '{print $1}'`
+echo "printing output--> count" $output >> /home/ec2-user/temp.txt
+
+if [ $output -gt 0 ]
+then
+echo "hello world, i m inside if block" >> /home/ec2-user/temp.txt
+sudo kill -9 $kill_process
+sudo node /var/lib/jenkins/workspace/node-js-deployment/index.js &
+else
+echo "lesser than eq to 0" >> /home/ec2-user/temp.txt
+sudo node /var/lib/jenkins/workspace/node-js-deployment/index.js &
+fi
+	  
+*************************end***************************	  
+
+
+Configiure Source Code Management under Jenkins  --select source code management as GIT
+http://52.66.30.14:8080/job/node-js-deployment/configure  ---admin admin username and password and see all configuration under job :node-js-deployment
+
+oon build tab add shell script 
+#!/bin/sh
+install_count=$( yum install -y gcc-c++ make  nodejs | wc -l)
+if [ $install_count -gt 0 ]
+then
+  echo " package  already exists! no need to install again"
+  else
+sudo yum install -y gcc-c++ make  nodejs
+fi
+sudo curl -sL https://rpm.nodesource.com/setup_6.x | sudo -E bash -
+sudo npm install -y
+
+output=`ps -eo pid,command | grep "index.js" | grep -v grep | awk '{print $1}'|wc -l`
+kill_process=`ps -eo pid,command | grep "index.js" | grep -v grep | awk '{print $1}'`
+echo "printing output" $output
+
+if [ $output -gt 0 ]
+then
+echo "hello world, i m inside if block"
+sudo kill -9 $kill_process
+sudo node /var/lib/jenkins/workspace/node-js-deployment/index.js &
+else
+echo "lesser than eq to 0"
+sudo node /var/lib/jenkins/workspace/node-js-deployment/index.js &
+fi

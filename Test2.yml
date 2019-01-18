@@ -1,0 +1,21 @@
+************Jenkins Setup script****************
+yum install java-1.8.0-openjdk.x86_64
+java -version
+ 
+wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo
+rpm –import http://pkg.jenkins-ci.org/redhat-stable/jenkins-ci.org.key
+yum install jenkins
+service jenkins start
+chkconfig jenkins on
+alternatives --install /usr/bin/jar jar /opt/jdk1.8.0_161/bin/jar 2
+alternatives --install /usr/bin/javac javac /opt/jdk1.8.0_161/bin/javac 2
+alternatives --set jar /opt/jdk1.8.0_161/bin/jar
+alternatives --set javac /opt/jdk1.8.0_161/bin/javac
+
+***********steps login into putty ********
+yum install git
+cd /home/ec2-user
+git clone git@github.com:heroku/node-js-sample.git
+
+select  Build Triggers
+Poll SCM -- CONFIGURE ON every what minute u need to run * * * * *
